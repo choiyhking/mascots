@@ -14,7 +14,7 @@ RUN git clone https://github.com/choiyhking/netperf.git && \
     ./configure --enable-intervals=yes && \
     make && make install
     
-WORKDIR /root/
+WORKDIR /
 COPY in_do_tcp_*.sh .
 RUN chmod +x in_do_tcp_*.sh
 

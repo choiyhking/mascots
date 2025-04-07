@@ -7,3 +7,4 @@ fc/ubuntu-24.04.ext4
 fc/ubuntu-24.04.squashfs.upstream
 fc/vmlinux-6.1.102
 fc/ubuntu-24.04.id_rsa
+**/result*/
