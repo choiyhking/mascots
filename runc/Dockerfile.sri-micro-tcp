@@ -14,7 +14,16 @@ RUN git clone https://github.com/choiyhking/netperf.git && \
     ./configure --enable-intervals=yes && \
     make && make install
     
-COPY ../do_tcp_*.sh .
-RUN chmod +x do_tcp_*.sh
+WORKDIR /root/
+COPY in_do_tcp_*.sh .
+RUN chmod +x in_do_tcp_*.sh
 
 CMD ["sleep", "infinity"]
+
+
+## Build ##
+# sudo docker build -f runc/Dockerfile.sri-micro-tcp -t sri-micro-tcp .
+# sudo docker login -u choiyhking
+# sudo docker tag sri-micro-tcp choiyhking/sri-micro-tcp:latest
+# sudo docker push choiyhking/sri-micro-tcp:latest
+
