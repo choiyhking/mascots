@@ -3,10 +3,9 @@
 
 trap "exit 1" SIGINT
 
-
-SERVER="192.168.51.201"
-TEST_TIME=10
-ITER=2
+SERVER="192.168.51.202"
+TEST_TIME=30
+ITER=10
 
 SIZES_SMALL=(1 32 512)
 SIZES_BIG=(1K 4K 16K 64K 256K 512K 1M)
@@ -19,9 +18,11 @@ if [ -d "$OUTPUT_DIR" ]; then
     i=1; while [ -d "${OUTPUT_DIR}.$i" ]; do ((i++)); done
     mv "$OUTPUT_DIR" "${OUTPUT_DIR}.$i"
 fi
+
 mkdir -p "$OUTPUT_DIR"
 
 OUTPUT_FILE_PREFIX="${OUTPUT_DIR}/result_tcp_rr"
+
 
 echo "[[ Starting TCP_RR tests ]]"
 
@@ -32,7 +33,7 @@ for RESP_SIZE in "${SIZES_BIG[@]}"; do
     for ((i=1; i<=ITER; i++)); do
         echo "    Run $i..."
         netperf -H "$SERVER" -p 12865 -t TCP_RR -l "$TEST_TIME" -P 0  \
-            -- -P 5001 -r 32,"$RESP_SIZE" >> "${OUTPUT_FILE_PREFIX}_32B_to_${RESP_SIZE}B"
+            -- -P 5001 -r 32,"$RESP_SIZE" >> "${OUTPUT_FILE_PREFIX}_32B_${RESP_SIZE}B"
     done
 done
 
@@ -43,7 +44,7 @@ for SIZE in "${SIZES_SMALL[@]}" "${SIZES_BIG[@]}"; do
     for ((i=1; i<=ITER; i++)); do
         echo "    Run $i..."
         netperf -H "$SERVER" -p 12865 -t TCP_RR -l "$TEST_TIME" -P 0 \
-            -- -P 5001 -r "$SIZE","$SIZE" >> "${OUTPUT_FILE_PREFIX}_${SIZE}B_to_${SIZE}B"
+            -- -P 5001 -r "$SIZE","$SIZE" >> "${OUTPUT_FILE_PREFIX}_${SIZE}B_${SIZE}B"
     done
 done
 
@@ -54,7 +55,7 @@ for REQ_SIZE in "${SIZES_BIG[@]}"; do
     for ((i=1; i<=ITER; i++)); do
         echo "    Run $i..."
         netperf -H "$SERVER" -p 12865 -t TCP_RR -l "$TEST_TIME" -P 0 \
-            -- -P 5001 -r "$REQ_SIZE",32 >> "${OUTPUT_FILE_PREFIX}_${REQ_SIZE}B_to_32B"
+            -- -P 5001 -r "$REQ_SIZE",32 >> "${OUTPUT_FILE_PREFIX}_${REQ_SIZE}B_32B"
     done
 done
 

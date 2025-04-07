@@ -1,12 +1,13 @@
 #!/bin/bash
 
+
 trap "exit 1" SIGINT
 
-SERVER="192.168.51.201"
-TEST_TIME=10
-ITER=2
-#MESSAGE_SIZES=(32 64 128 256 512 1K 2K 4K 8K 16K 32K 64K 128K 256K 512K 1M)
-MESSAGE_SIZES=(32 256 1K 16K 64K 256K 1M)
+SERVER="192.168.51.202"
+TEST_TIME=30
+ITER=10
+MESSAGE_SIZES=(32 64 128 256 512 1K 2K 4K 8K 16K 32K 64K 128K 256K 512K 1M)
+#MESSAGE_SIZES=(32 256 1K 16K 64K 256K 1M)
 HZ_LIST=("1 1000" "2 500" "5 200" "10 100")
 
 OUTPUT_DIR="result_tcp_stream"
@@ -22,7 +23,6 @@ OUTPUT_FILE_PREFIX="${OUTPUT_DIR}/result_tcp_stream"
 # Recv Socket Size(B) Send Socket Size(B) Send Message Size(B) Elapsed Time(s) Throughput(KB/s)
 
 echo "[[ Starting TCP_STREAM tests ]]"
-
 
 for pair in "${HZ_LIST[@]}"; do
     read BURST WAIT <<< "$pair"
