@@ -23,7 +23,7 @@ CMD ["sleep", "infinity"]
 
 ## Build ##
 # sudo docker build -f runc/Dockerfile.sri-micro-tcp -t sri-micro-tcp .
-# sudo docker login -u choiyhking
 # sudo docker tag sri-micro-tcp choiyhking/sri-micro-tcp:latest
+# sudo docker login -u choiyhking
 # sudo docker push choiyhking/sri-micro-tcp:latest
 
