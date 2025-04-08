@@ -1,10 +1,12 @@
 #!/bin/bash
-chmod +x do_tcp_*.sh
+
 
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get install -y -qq \
     tzdata apt-utils vim git wget build-essential
+
+chmod +x in_do_tcp_*.sh
 
 git clone https://github.com/choiyhking/netperf.git 
 cd netperf 

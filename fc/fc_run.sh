@@ -1,8 +1,15 @@
 #!/bin/bash
 
+
 TAP_DEV="tap0"
 TAP_IP="172.16.0.1"
 MASK_SHORT="/30"
+
+if [ "$#" -eq 0 ]; then
+    echo "Usage: $0 <workload name>"
+    echo "workload name: e.g., sri-micro-tcp"
+    exit 1
+fi
 
 # Setup network interface
 sudo ip link del "$TAP_DEV" 2> /dev/null || true
@@ -28,8 +35,11 @@ sudo iptables -t nat -A POSTROUTING -o "$HOST_IFACE" -j MASQUERADE
 DISK_SIZE=10G
 ROOTFS_PREFIX=$(ls *.upstream | sed 's/\.squashfs\.upstream$//')
 if [ -f "${ROOTFS_PREFIX}-$1.ext4" ]; then
-    echo "Already exist!"
+    echo "Rootfs already exists!"
+    echo 1 > .rootfs_status
+    #sudo rm ${ROOTFS_PREFIX}-$1.ext4 
 else
+    echo 0 > .rootfs_status
     sudo chown -R root:root squashfs-root
     truncate -s $DISK_SIZE ${ROOTFS_PREFIX}-$1.ext4
     sudo mkfs.ext4 -d squashfs-root -F ${ROOTFS_PREFIX}-$1.ext4 > /dev/null 2>&1
@@ -39,10 +49,10 @@ API_SOCKET="/tmp/firecracker.socket"
 KERNEL="fc-Image-custom"
 #KERNEL="./$(ls vmlinux* | tail -1)"
 ROOTFS="./$(ls *"$1".ext4 | tail -1)"
-VCPU=$2
-MEM=$3
+VCPU=3
+MEM=4096
 FC_MAC="06:00:AC:10:00:02"
-CONFIG_FILE="vm_config"
+CONFIG_FILE="vm_config" # this is base configuration
 
 jq --arg kernel "$KERNEL" \
    --arg rootfs "$ROOTFS" \
@@ -64,6 +74,7 @@ sudo rm -f $API_SOCKET
 
 sleep 5
 
+
 KEY_NAME=./$(ls *.id_rsa | tail -1)
 
 # Setup internet access in the guest
@@ -73,7 +84,7 @@ ssh -i $KEY_NAME root@172.16.0.2  "ip route add default via 172.16.0.1 dev eth0"
 ssh -i $KEY_NAME root@172.16.0.2  "echo 'nameserver 155.230.10.2' > /etc/resolv.conf"
 
 # SSH into the microVM
-ssh -i $KEY_NAME root@172.16.0.2
+#ssh -i $KEY_NAME root@172.16.0.2
 
 # Use `root` for both the login and password.
 # Run `reboot` to exit.

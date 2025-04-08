@@ -7,8 +7,8 @@ sudo sed -i "s/^default_vcpus = [0-9]\+/default_vcpus = 3/" "${KATA_CONFIG}"
 sudo sed -i "s/^default_memory = [0-9]\+/default_memory = 4096/" "${KATA_CONFIG}"
 
 
-CONTAINER_NAME=sri-micro-tcp-kata
-IMAGE_NAME=sri-micro-tcp
+CONTAINER_NAME="sri-micro-tcp-kata"
+IMAGE_NAME="sri-micro-tcp"
 SERVER_IP="192.168.51.202"
 
 

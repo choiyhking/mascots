@@ -3,8 +3,9 @@ fc/firecracker
 fc/id_rsa.pub
 fc/release-v1.11.0-aarch64
 fc/squashfs-root
-fc/ubuntu-24.04.ext4
 fc/ubuntu-24.04.squashfs.upstream
+fc/*.ext4
+fc/vm_config_*
 fc/vmlinux-6.1.102
-fc/ubuntu-24.04.id_rsa
+
 **/result*/

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 
-CONTAINER_NAME=sri-micro-tcp-runc
-IMAGE_NAME=sri-micro-tcp
-SERVER_IP=192.168.51.202
+CONTAINER_NAME="sri-micro-tcp-runc"
+IMAGE_NAME="sri-micro-tcp"
+SERVER_IP="192.168.51.202"
 CPU=3
 MEMORY="4G"
 
