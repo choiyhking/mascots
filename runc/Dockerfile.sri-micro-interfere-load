@@ -1,0 +1,21 @@
+FROM ubuntu:24.10
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    echo "iperf3 iperf3/start_daemon boolean true" | debconf-set-selections && \
+    apt-get install -y -qq tzdata vim sysbench iperf3 && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /
+COPY in_do_interfere_load.sh .
+RUN chmod +x in_do_interfere_load.sh
+
+CMD ["sleep", "infinity"]
+
+
+## Build ##
+# sudo docker build -f runc/Dockerfile.sri-micro-interfere-load -t sri-micro-interfere-load:latest .
+# sudo docker tag sri-micro-interfere-load choiyhking/sri-micro-interfere-load:latest
+# sudo docker login -u choiyhking
+# sudo docker push choiyhking/sri-micro-interfere-load:latest

@@ -49,5 +49,5 @@ if [ -d "$OUTPUT_DIR" ]; then
     mv "$OUTPUT_DIR" "${OUTPUT_DIR}.$i"
 fi
 
-scp -i "$SSH_KEY" -r root@"$GUEST_IP":/root/"$OUTPUT_DIR" ../"$OUTPUT_DIR"
+scp -q -i "$SSH_KEY" -r root@"$GUEST_IP":/root/"$OUTPUT_DIR" ./"$OUTPUT_DIR"
 pgrep [f]irecracker | xargs kill -9 > /dev/null 2>&1
