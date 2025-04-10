@@ -65,9 +65,11 @@ ITER="${2:-10}"
 if [ "$WORKLOAD" == "stream" ]; then
     echo "[Run] TCP_STREAM $ITER times ..."
     sudo docker exec "$CONTAINER_NAME" ./in_do_tcp_stream.sh $SERVER_IP $ITER
+
 elif [ "$WORKLOAD" == "rr" ]; then
     echo "[Run] TCP_RR $ITER times ..."
     sudo docker exec "$CONTAINER_NAME" ./in_do_tcp_rr.sh $SERVER_IP $ITER
+
 else
     echo "Invalid workload: $WORKLOAD"
     exit 1
