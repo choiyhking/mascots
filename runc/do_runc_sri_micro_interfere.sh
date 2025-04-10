@@ -1,20 +1,21 @@
 #!/bin/bash
 
 
+if [ "$#" -eq 0 ]; then
+    echo "Usage: $0 <interferer_mode> <concurrency> <max_bandwidth> [clear]"
+    echo "  <interferer_mode> : sysbench | tcp-tx | tcp-rx | udp-tx | udp-rx"
+    echo "  <concurrency>     : Number of concurrent instances (default=1, max=5)"
+    echo "  [max_bandwidth]   : Default is '1' -> '100M' (max=8)."
+    echo "  [clear]           : yes | no (Delete existing results. Default is 'no')"
+    exit 1
+fi
+
+
 VICTIM_CONTAINER_NAME="sri-micro-interfere-victim-runc"
 VICTIM_IMAGE_NAME="sri-micro-interfere-victim"
 
-LOAD_CONTAINER_NAME="sri-micro-interfere-load-runc"
+LOAD_CONTAINER_PREFIX="sri-micro-interfere-load-runc"
 LOAD_IMAGE_NAME="sri-micro-interfere-load"
-
-SERVER_IP="192.168.51.203"
-MEMORY="4G"
-
-# Pin network-related interrupts to a specific CPU core
-# CPU "0" is default in Jetpack 6 (we can't change this.)
-## grep enP8p1s0 /proc/interrupts -> interrupt #: 268
-## cat /proc/irq/268/smp_affinity_list -> 0-5
-## echo 0 | sudo tee /proc/irq/268/smp_affinity
 
 
 run_container() {
@@ -23,85 +24,108 @@ run_container() {
 
     if [ "$(sudo docker ps -a -q -f name="^${name}$")" ]; then
     	STATUS=$(sudo docker inspect -f '{{.State.Status}}' "$name")
-    	if [ "$STATUS" = "exited" ] || [ "$STATUS" = "created" ]; then
-		echo "Container '$name' already exists."
-		sudo docker start $name
+    	
+        if [ "$STATUS" = "exited" ] || [ "$STATUS" = "created" ]; then
+		    echo "Container '$name' already exists. Restarting it."
+		    sudo docker start $name > /dev/null
 	else
 		echo "Container '$name' is already running."
 	fi
     else
-	echo "Container does not exist. Creating container '$name'."
+	    echo "Container does not exist. Creating a new container '$name'."
         sudo docker run -q -d --name "$name" \
-            --cpuset-cpus="0" \
-	    --cpu-period=100000 \
-	    --cpu-quota=50000 \
-            --memory="$MEMORY" \
-            --memory-swap="$MEMORY" \
-            "$image":latest
-	
+            --cpus=1 \
+            --memory=1G \
+            --memory-swap=1G \
+            "$image":latest > /dev/null
     fi
 }
 
-if [ "$#" -eq 0 ]; then
-    echo "Usage: $0 [baseline | tcp-tx | tcp-rx | udp-tx | udp-rx]"
+
+
+VICTIM_SERVER_IP="192.168.51.201"
+if nc -z -w2 "$VICTIM_SERVER_IP" 12865; then
+	echo "netserver reachable at "$VICTIM_SERVER_IP":12865"
+else
+    echo "netserver not reachable."
+    echo "[Hint] netserver"
     exit 1
 fi
 
-
-if nc -z -w2 "$SERVER_IP" 5201; then
-	echo "iperf3 server reachable at "$SERVER_IP":5201"
+LOAD_SERVER_IP="192.168.51.203"
+if nc -z -w2 "$LOAD_SERVER_IP" 5201; then
+	echo "iperf3 server reachable at "$LOAD_SERVER_IP":5201"
 else
     echo "iperf3 server not reachable."
     echo "[Hint] iperf3 -s"
     exit 1
 fi
 
-
+CLEAR="${4:-no}"
 OUTPUT_DIR="result_interfere"
-if [ -d "$OUTPUT_DIR" ]; then
-    i=1; while [ -d "${OUTPUT_DIR}.$i" ]; do ((i++)); done
-    mv "$OUTPUT_DIR" "${OUTPUT_DIR}.$i"
+if [ "$CLEAR" == "yes" ]; then
+    echo "Delete existing results."
+    rm -rf "$OUTPUT_DIR"
+    echo "Create new output directory."
+    mkdir -p "$OUTPUT_DIR"
 fi
-mkdir -p "$OUTPUT_DIR"
 
+
+CONCURRENCY="${2:-1}"
+for i in $(seq 1 "$CONCURRENCY"); do
+    run_container "${LOAD_CONTAINER_PREFIX}-$i" "$LOAD_IMAGE_NAME"
+done
 
 run_container "$VICTIM_CONTAINER_NAME" "$VICTIM_IMAGE_NAME"
-run_container "$LOAD_CONTAINER_NAME" "$LOAD_IMAGE_NAME"
-
 sleep 5
 
-# Maximum of TCP send/recv: ~800Mbps
-# Maximum of UDP send: ~1.4Gbps
-# Maximum of UDP recv: ~950Mbps
-MAX=8
 
-if [ "$1" == "baseline" ]; then
-        echo "[[ Running $1 ]]"
-	sudo docker exec "$LOAD_CONTAINER_NAME" ./in_do_interfere_load.sh "$1" &
-    	sleep 5
-	sudo docker exec "$VICTIM_CONTAINER_NAME" ./in_do_interfere_victim.sh "$1"
-	sudo docker cp "$VICTIM_CONTAINER_NAME":/result_interfere_victim_$1 ./"$OUTPUT_DIR"/
-	sudo docker stop "$LOAD_CONTAINER_NAME"
+MODE="$1"
+MAX="${3:-1}" # Maximum bandwidth is ~800Mbps
 
-elif [[ "$1" =~ ^(tcp-tx|tcp-rx|udp-tx|udp-rx)$ ]]; then
-	for parallel in $(seq 1 $MAX); do
-		echo "[[ Running $1 (w/ parallel=$parallel) ]]"
-		
-		sudo docker exec "$LOAD_CONTAINER_NAME" ./in_do_interfere_load.sh "$1" "$parallel" & 
-		sleep 5
+echo "================== CONFIGURATION =================="
+echo "  Interferer Mode : $MODE"
+echo "  Concurrency     : $CONCURRENCY"
+echo "  Max Bandwidth   : $MAX"
+echo "  Clear Results   : $CLEAR"
+echo "===================================================="
 
-		sudo docker exec "$VICTIM_CONTAINER_NAME" ./in_do_interfere_victim.sh "$1" "$parallel" 
-		sudo docker cp "$VICTIM_CONTAINER_NAME":/result_interfere_victim_$1_$parallel ./"$OUTPUT_DIR"/
-		sudo docker stop "$LOAD_CONTAINER_NAME"
-		sleep 5
-		sudo docker start "$LOAD_CONTAINER_NAME" 
-		sleep 5
-	done
-else
-	echo "Wrong options."
-	exit 1
+if [ "$MODE" == "sysbench" ]; then
+    echo "[Run] Victim ..."
+    echo "      waiting 10 seconds inside the container for interferers to start."
+    sudo docker exec "$VICTIM_CONTAINER_NAME" \
+        bash -c "sleep 10 && ./in_do_interfere_victim.sh \"$VICTIM_SERVER_IP\" \"$MODE\" \"\" \"$CONCURRENCY\"" &
+
+    echo "[Run] Interferer (sysbench) ..."
+    sudo docker ps --filter "name=^${LOAD_CONTAINER_PREFIX}-" --format "{{.Names}}" \
+        | parallel -j 0 "sudo docker exec {} ./in_do_interfere_load.sh $LOAD_SERVER_IP $MODE"
+        
+    echo "Finished."
+    sudo docker cp "$VICTIM_CONTAINER_NAME":/result_interfere_victim_${MODE}_c${CONCURRENCY} ./"$OUTPUT_DIR"/
+
+elif [[ "$MODE" =~ ^(tcp-tx|tcp-rx|udp-tx|udp-rx)$ ]]; then
+    for i in $(seq 1 $MAX); do
+        BANDWIDTH="$((i * 100))M" # e.g., 500M
+
+        echo "[Run] Victim ..."
+        echo "      waiting 10 seconds inside the container for interferers to start."
+        sudo docker exec "$VICTIM_CONTAINER_NAME" \
+            bash -c "sleep 10 && ./in_do_interfere_victim.sh \"$VICTIM_SERVER_IP\" \"$MODE\" \"$BANDWIDTH\" \"$CONCURRENCY\"" &
+
+        echo "[Run] $CONCURRENCY Interferer ..."
+        echo "      iperf $MODE bandwidth=$BANDWIDTH"
+        sudo docker ps --filter "name=^${LOAD_CONTAINER_PREFIX}-" --format "{{.Names}}" \
+            | parallel -j 0 "sudo docker exec {} ./in_do_interfere_load.sh $LOAD_SERVER_IP $MODE $BANDWIDTH"
+        
+        echo "Finished."
+        sudo docker cp "$VICTIM_CONTAINER_NAME":/result_interfere_victim_${MODE}_${BANDWIDTH}_c${CONCURRENCY} ./"$OUTPUT_DIR"/
+
+        echo ""
+        sleep 10
+    done
 fi
 
-
+sudo docker ps --filter "name=^"$LOAD_CONTAINER_PREFIX"-" --format "{{.Names}}" \
+    | parallel -j 0 "sudo docker stop {}"
 sudo docker stop "$VICTIM_CONTAINER_NAME"
-sudo docker stop "$LOAD_CONTAINER_NAME"
+

@@ -2,9 +2,9 @@ FROM ubuntu:24.10
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y -qq \
-    tzdata vim sysbench \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y -qq tzdata vim netperf &&\
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
 COPY in_do_interfere_victim.sh .

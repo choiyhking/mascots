@@ -19,3 +19,4 @@ CMD ["sleep", "infinity"]
 # sudo docker tag sri-micro-interfere-load choiyhking/sri-micro-interfere-load:latest
 # sudo docker login -u choiyhking
 # sudo docker push choiyhking/sri-micro-interfere-load:latest
+# sudo docker image prune -f

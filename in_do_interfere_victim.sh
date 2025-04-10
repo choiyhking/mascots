@@ -1,36 +1,26 @@
 #!/bin/bash
 
 
-TEST_TIME=30
-
-
 if [ "$#" -eq 0 ]; then
-	echo "Usage: $0 <load name> <parallel>"
-	echo "load name: e.g., tcp-tx"
-	echo "parallel: e.g., 5"
+	echo "Usage: $0 <server_IP> <interferer_mode> [bandwidth] <concurrency>"
+	echo "  <interferer_mode> : e.g., tcp-tx"
+	echo "  [bandwidth]       : e.g., 500M"
+    echo "  <concurrency>     : e.g., 4"
 	exit 1
 fi
 
-if [ -n "$2" ]; then
-    OUTPUT_FILE="result_interfere_victim_${1}_${2}"
-else
-    OUTPUT_FILE="result_interfere_victim_${1}"
-fi
+TEST_TIME=30
+SERVER_IP="$1"
+MODE="$2"
+BANDWIDTH="$3"
+CONCURRENCY="$4"
 
-rm "$OUTPUT_FILE" > /dev/nunll 2>&1
+# Same request/response size
+SIZE="1K"
 
-echo "Starting VICTIM (sysbench)."
-echo "  sysbench is running ..."
-sysbench cpu --threads=1 --time="$TEST_TIME" --cpu-max-prime=100000 run | awk '
-/events per second:/        {eps=$4}
-/total number of events:/   {total=$5}
-/min:/                      {min=$2}
-/avg:/                      {avg=$2}
-/max:/                      {max=$2}
-/95th percentile:/          {p95=$3}
-/sum:/                      {sum=$2}
-END {
-    printf("%s,%s,%s,%s,%s,%s,%s\n", eps, total, min, avg, max, p95, sum)
-}' > "${OUTPUT_FILE}"
+OUTPUT_FILE="result_interfere_victim_${MODE}${BANDWIDTH:+_${BANDWIDTH}}_c${CONCURRENCY}"
 
-echo "VICTIM (sysbench) finished."
+netperf -H "$SERVER_IP" -p 12865 -t TCP_RR -l "$TEST_TIME" -P 0 \
+            -- -P 5001 -r "$SIZE","$SIZE" \
+            | head -1 | awk '{print $NF}' > "$OUTPUT_FILE"
+
