@@ -8,4 +8,5 @@ fc/*.ext4
 fc/vm_config_*
 fc/vmlinux-6.1.102
 
+*.swp
 **/result*/

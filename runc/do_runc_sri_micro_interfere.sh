@@ -1,12 +1,38 @@
 #!/bin/bash
 
 
-if [ "$#" -eq 0 ]; then
-    echo "Usage: $0 <interferer_mode> <concurrency> <max_bandwidth> [clear]"
-    echo "  <interferer_mode> : sysbench | tcp-tx | tcp-rx | udp-tx | udp-rx"
-    echo "  <concurrency>     : Number of concurrent instances (default=1, max=5)"
-    echo "  [max_bandwidth]   : Default is '1' -> '100M' (max=8)."
-    echo "  [clear]           : yes | no (Delete existing results. Default is 'no')"
+# Default values
+CONCURRENCY=1
+MAX=1 # Maximum bandwidth is ~800Mbps
+CLEAR="no"
+
+for arg in "$@"; do
+    case $arg in
+        --load_mode=*)
+            MODE="${arg#*=}" ;;
+        --concurrency=*)
+            CONCURRENCY="${arg#*=}" ;;
+        --max_bandwidth=*)
+            MAX="${arg#*=}" ;;
+        --clear=*)
+            CLEAR="${arg#*=}" ;;
+        --help|-h)
+            echo "Usage: $0 <load_mode> [concurrency] [bandwidth] [clear]"
+            echo "  --load_mode     : sysbench | tcp-tx | tcp-rx | udp-tx | udp-rx (required)"
+            echo "  --concurrency   : number of concurrent instances (default: 1, max: 5)"
+            echo "  --max_bandwidth : max bandwidth value N → N*100M (default: 1, max: 8)"
+            echo "  --clear         : yes | no (delete existing results, default: no)"
+            exit 0 ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Run with --help for usage."
+            exit 1 ;;
+    esac
+done
+
+if [ -z "$MODE" ]; then
+    echo "Error: --load_mode is required."
+    echo "Run with --help for usage."
     exit 1
 fi
 
@@ -61,7 +87,6 @@ else
     exit 1
 fi
 
-CLEAR="${4:-no}"
 OUTPUT_DIR="result_interfere"
 if [ "$CLEAR" == "yes" ]; then
     echo "Delete existing results."
@@ -71,18 +96,15 @@ if [ "$CLEAR" == "yes" ]; then
 fi
 
 
-CONCURRENCY="${2:-1}"
 for i in $(seq 1 "$CONCURRENCY"); do
     run_container "${LOAD_CONTAINER_PREFIX}-$i" "$LOAD_IMAGE_NAME"
 done
 
 run_container "$VICTIM_CONTAINER_NAME" "$VICTIM_IMAGE_NAME"
+
 sleep 5
 
-
-MODE="$1"
-MAX="${3:-1}" # Maximum bandwidth is ~800Mbps
-
+  
 echo "================== CONFIGURATION =================="
 echo "  Interferer Mode : $MODE"
 echo "  Concurrency     : $CONCURRENCY"

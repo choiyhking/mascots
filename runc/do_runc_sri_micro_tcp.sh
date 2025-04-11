@@ -1,32 +1,57 @@
 #!/bin/bash
 
 
-if [ "$#" -eq 0 ]; then
-    echo "Usage: $0 <workload> <iteration> <CPU> [clear]"
-    echo "  <workload>  : stream | rr"
-    echo "  <iteration> : number of iterations for each test (default=10)"
-    echo "  <CPU>       : default is '1'"
-    echo "  [clear]     : yes | no (Delete existing results. Default is 'no')"
+# Default values
+ITER=10
+CPU=1
+MEMORY="4G"
+CLEAR="no"
+
+for arg in "$@"; do
+    case $arg in
+        --workload=*)
+            WORKLOAD="${arg#*=}" ;;
+        --iteration=*)
+            ITERATION="${arg#*=}" ;;
+        --cpu=*)
+            CPU="${arg#*=}" ;;
+        --clear=*)
+            CLEAR="${arg#*=}" ;;
+        --help|-h)
+            echo "Usage: $0 <workload> [iteration] [cpu] [clear]"
+            echo "  --workload  : stream | rr (required)"
+            echo "  --iteration : number of iterations (default: 10)"
+            echo "  --cpu       : number of CPUs to assign (default: 1)"
+            echo "  --clear     : yes | no (delete existing results, default: no)"
+            exit 0 ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Run with --help for usage."
+            exit 1 ;;
+    esac
+done
+
+if [ -z "$WORKLOAD" ]; then
+    echo "Error: --workload is required."
     exit 1
 fi
 
+
 CONTAINER_NAME="sri-micro-tcp-runc"
 IMAGE_NAME="sri-micro-tcp"
-
 
 SERVER_IP="192.168.51.201"
 if nc -z -w2 "$SERVER_IP" 12865; then
 	echo "netserver reachable at "$SERVER_IP":12865"
 else
     echo "netserver not reachable."
-    echo "[Hint] sudo docker run -d --name sri-micro-tcp-netserver -p 12865:12865 -p 5001:5001 sri-micro-tcp:latest"
+    echo "[Hint] sudo docker run --pull always -d --name sri-micro-tcp-netserver -p 12865:12865 -p 5001:5001 choiyhking/sri-micro-tcp:latest"
     echo "[Hint] sudo docker start sri-micro-tcp-netserver"
     echo "[Hint] sudo docker exec sri-micro-tcp-netserver netserver"
     exit 1
 fi
 
-WORKLOAD="$1"
-CLEAR="${4:-no}"
+
 OUTPUT_DIR="result_tcp_$WORKLOAD"
 if [ "$CLEAR" == "yes" ]; then
     echo "Delete existing results."
@@ -36,8 +61,6 @@ if [ "$CLEAR" == "yes" ]; then
 fi
 
 
-CPU="${3:-1}"
-MEMORY="4G"
 
 if [ "$(sudo docker ps -a -q -f name="^${CONTAINER_NAME}$")" ]; then
     STATUS=$(sudo docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME")
@@ -59,8 +82,6 @@ fi
 	
 sleep 5
 
-
-ITER="${2:-10}"
 
 if [ "$WORKLOAD" == "stream" ]; then
     echo "[Run] TCP_STREAM $ITER times ..."

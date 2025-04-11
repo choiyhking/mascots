@@ -11,6 +11,7 @@ DOCKERFILE="$1"
 IMAGE_NAME="${DOCKERFILE#Dockerfile.}"    
 BUILD_CONTEXT=".."
 
+
 echo "[Configuration]"
 echo "  - Dockerfile    : $DOCKERFILE"
 echo "  - Image Name    : $IMAGE_NAME"
@@ -30,3 +31,6 @@ sudo docker image prune -f
 echo "Build completed successfully."
 sudo docker images | grep "$IMAGE_NAME"
 
+echo "Pushing to Docker Hub ..."
+sudo docker tag "$IMAGE_NAME" choiyhking/"${IMAGE_NAME}":latest
+sudo docker push choiyhking/"${IMAGE_NAME}":latest

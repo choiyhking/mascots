@@ -1,15 +1,41 @@
 #!/bin/bash
 
 
-if [ "$#" -eq 0 ]; then
-    echo "Usage: $0 <workload> <iteration> <CPU> [clear]"
-    echo "  <workload>  : stream | rr"
-    echo "  <iteration> : number of iterations for each test (default=10)"
-    echo "  <CPU>       : default is '1'"
-    echo "  [clear]     : yes | no (Delete existing results. Default is 'no')"
+# Default values
+ITER=10
+CPU=1
+MEM=4096
+DISK="10G"
+CLEAR="no"
+
+for arg in "$@"; do
+    case $arg in
+        --workload=*)
+            WORKLOAD="${arg#*=}" ;;
+        --iteration=*)
+            ITERATION="${arg#*=}" ;;
+        --cpu=*)
+            CPU="${arg#*=}" ;;
+        --clear=*)
+            CLEAR="${arg#*=}" ;;
+        --help|-h)
+            echo "Usage: $0 <workload> [iteration] [cpu] [clear]"
+            echo "  --workload  : stream | rr (required)"
+            echo "  --iteration : number of iterations (default: 10)"
+            echo "  --cpu       : number of CPUs to assign (default: 1)"
+            echo "  --clear     : yes | no (delete existing results, default: no)"
+            exit 0 ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Run with --help for usage."
+            exit 1 ;;
+    esac
+done
+
+if [ -z "$WORKLOAD" ]; then
+    echo "Error: --workload is required."
     exit 1
 fi
-
 
 SSH_KEY="ubuntu-24.04.id_rsa"
 GUEST_IP="172.16.0.2"
@@ -28,7 +54,6 @@ else
 fi
 
 
-CLEAR="${4:-no}"
 OUTPUT_DIR="result_tcp_$WORKLOAD"
 if [ "$CLEAR" == "yes" ]; then
     echo "Delete existing results."
@@ -36,11 +61,6 @@ if [ "$CLEAR" == "yes" ]; then
     echo "Create new output directory."
     mkdir -p "$OUTPUT_DIR"
 fi
-
-WORKLOAD="$1"
-CPU="${3:-1}"
-MEM=4096
-DISK="10G"
 
 echo "Creating Firecracker microVM ..."
 echo "  CPU=$CPU / MEM=$MEM / DISK=$DISK" 
@@ -56,7 +76,6 @@ if [ "$(cat .rootfs_status)" -eq 0 ]; then
 fi
 
 
-ITER="${2:-10}"
 
 if [ "$WORKLOAD" == "stream" ]; then
     echo "[Run] TCP_STREAM $ITER times ..."

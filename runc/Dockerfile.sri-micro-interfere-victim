@@ -11,11 +11,10 @@ COPY in_do_interfere_victim.sh .
 RUN chmod +x in_do_interfere_victim.sh
 
 CMD ["sleep", "infinity"]
-#ENTRYPOINT ["/in_do_interfere_victim.sh"]
 
 
 ## Build ##
-# sudo docker build -f runc/Dockerfile.sri-micro-interfere-victim -t sri-micro-interfere-victim:latest .
+# sudo docker build -f runc/Dockerfile.sri-micro-interfere-victim -t sri-micro-interfere-victim:latest ..
 # sudo docker tag sri-micro-interfere-victim choiyhking/sri-micro-interfere-victim:latest
 # sudo docker login -u choiyhking
 # sudo docker push choiyhking/sri-micro-interfere-victim:latest

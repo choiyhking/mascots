@@ -15,7 +15,7 @@ CMD ["sleep", "infinity"]
 
 
 ## Build ##
-# sudo docker build -f runc/Dockerfile.sri-micro-interfere-load -t sri-micro-interfere-load:latest .
+# sudo docker build -f runc/Dockerfile.sri-micro-interfere-load -t sri-micro-interfere-load:latest ..
 # sudo docker tag sri-micro-interfere-load choiyhking/sri-micro-interfere-load:latest
 # sudo docker login -u choiyhking
 # sudo docker push choiyhking/sri-micro-interfere-load:latest
